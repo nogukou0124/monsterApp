@@ -1,0 +1,8 @@
+<resources>
+    <string name="app_name">MonsterApp</string>
+    <string name="feed_btn">エサ</string>
+    <string name="toilet_btn">トイレ</string>
+    <string name="cure_btn">治療</string>
+    <string name="buttle_btn">通信対戦</string>
+    <string name="reset_btn">リセット</string>
+</resources>
