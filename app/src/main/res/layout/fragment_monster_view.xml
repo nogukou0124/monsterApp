@@ -1,0 +1,122 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:orientation="vertical"
+    android:gravity="center"
+    android:layout_marginBottom="50dp"
+    tools:context=".views.MonsterViewFragment"
+    android:background="@color/white">
+
+    <view
+        android:id="@+id/monster_view"
+        class="com.example.monsterapp.views.MonsterView"
+        android:layout_width="match_parent"
+        android:layout_height="0dp"
+        android:gravity="center"
+        android:layout_weight="5"
+        android:orientation="vertical"
+        android:paddingBottom="20dp"
+        />
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="0dp"
+        android:layout_weight="2"
+        android:orientation="vertical"
+        android:gravity="center"
+        >
+
+        <TextView
+            android:id="@+id/monster_name"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:gravity="center"
+            android:textSize="20sp"
+            android:textStyle="bold"
+             />
+
+        <TextView
+            android:id="@+id/monster_hp"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:gravity="center"
+            android:textSize="20sp"
+            android:textStyle="bold"
+            />
+
+        <TextView
+            android:id="@+id/monster_power"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:gravity="center"
+            android:textSize="20sp"
+            android:textStyle="bold"
+            />
+    </LinearLayout>
+
+    <LinearLayout
+        android:layout_width="wrap_content"
+        android:layout_height="0dp"
+        android:orientation="horizontal"
+        android:gravity="center"
+        android:layout_weight="1"
+        android:layout_marginBottom="16dp"
+        >
+        <Button
+            android:id="@+id/feed_btn"
+            android:layout_width="160dp"
+            android:layout_height="50dp"
+            android:text="@string/feed_btn"
+            android:layout_margin="10dp"
+            />
+        <Button
+            android:id="@+id/toilet_btn"
+            android:layout_width="160dp"
+            android:layout_height="50dp"
+            android:text="@string/toilet_btn"
+            android:layout_margin="10dp"
+            />
+    </LinearLayout>
+
+    <LinearLayout
+        android:layout_width="wrap_content"
+        android:layout_height="0dp"
+        android:gravity="center"
+        android:layout_weight="1"
+        android:layout_marginBottom="16dp"
+        >
+        <Button
+            android:id="@+id/cure_btn"
+            android:layout_width="160dp"
+            android:layout_height="50dp"
+            android:text="@string/cure_btn"
+            android:layout_margin="10dp"
+            />
+        <Button
+            android:id="@+id/battle_btn"
+            android:layout_width="160dp"
+            android:layout_height="50dp"
+            android:text="@string/buttle_btn"
+            android:layout_margin="10dp"
+            />
+    </LinearLayout>
+
+    <LinearLayout
+        android:layout_width="wrap_content"
+        android:layout_height="0dp"
+        android:gravity="center"
+        android:layout_weight="1"
+        >
+
+        <Button
+            android:id="@+id/reset_btn"
+            android:layout_width="160dp"
+            android:layout_height="50dp"
+            android:text="@string/reset_btn"
+            android:layout_margin="10dp"
+            />
+    </LinearLayout>
+
+</LinearLayout>
