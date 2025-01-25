@@ -86,4 +86,6 @@ dependencies {
 
 dependencies {
     implementation("com.google.code.gson:gson:2.11.0")
+    implementation("io.reactivex.rxjava3:rxjava:3.1.5")
+    implementation("io.reactivex.rxjava3:rxandroid:3.0.2")
 }
