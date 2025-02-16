@@ -5,36 +5,36 @@ import android.util.Log;
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 
-import com.example.monsterapp.models.entity.state.permanentState.DeathState;
-import com.example.monsterapp.models.entity.state.permanentState.NormalState;
-import com.example.monsterapp.models.entity.state.permanentState.SickState;
-import com.example.monsterapp.models.entity.state.permanentState.SleepState;
-import com.example.monsterapp.models.entity.state.temporaryState.TemporaryState;
+import com.example.monsterapp.models.entity.monster.state.State;
+import com.example.monsterapp.models.entity.monster.state.StateCode;
+import com.example.monsterapp.models.entity.monster.state.permanentState.DeathState;
+import com.example.monsterapp.models.entity.monster.state.permanentState.NormalState;
+import com.example.monsterapp.models.entity.monster.state.permanentState.SickState;
+import com.example.monsterapp.models.entity.monster.state.permanentState.SleepState;
+import com.example.monsterapp.models.entity.monster.state.temporaryState.TemporaryState;
+import com.example.monsterapp.models.manager.MonsterManager;
 import com.example.monsterapp.utils.Event.Event;
 import com.example.monsterapp.utils.Event.EventCode;
-import com.example.monsterapp.models.entity.state.State;
-import com.example.monsterapp.models.entity.state.StateCode;
 
 import java.util.Timer;
 import java.util.TimerTask;
-
-import io.reactivex.rxjava3.subjects.BehaviorSubject;
 
 /**
  * モンスターステートマシンクラス
  */
 public class MonsterStateMachine {
+    /** Manager */
+    @NonNull MonsterManager monsterManager;
     /** state machine */
     @NonNull StateMachine stateMachine = new StateMachine();
     /** 時間遷移タスク */
     @Nullable Timer timer = null;
-    /** Subject */
-    @NonNull private final BehaviorSubject<State> stateBehaviorSubject = BehaviorSubject.create();
 
     /**
      * コンストラクタ
      */
-    public MonsterStateMachine() {
+    public MonsterStateMachine(@NonNull MonsterManager monsterManager) {
+        this.monsterManager = monsterManager;
         // state
         stateMachine.addState(new NormalState(stateMachine, StateCode.NORMAL));
         stateMachine.addState(new SickState(stateMachine, StateCode.SICK));
@@ -103,21 +103,12 @@ public class MonsterStateMachine {
     }
 
     /**
-     * behaviorSubjectのgetter
-     * @return 状態のbehaviorSubject
-     */
-    @NonNull
-    public BehaviorSubject<State> getStateBehaviorSubject() {
-        return stateBehaviorSubject;
-    }
-
-    /**
      * コールバック処理（状態変更時）
      */
     private void onStateChanged() {
         State newState = stateMachine.getState(0);
         if (newState != null) {
-            stateBehaviorSubject.onNext(newState);
+            monsterManager.updateState(newState);
         }
     }
 }

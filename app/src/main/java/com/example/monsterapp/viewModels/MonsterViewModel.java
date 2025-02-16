@@ -12,14 +12,12 @@ import androidx.lifecycle.LiveData;
 import androidx.lifecycle.MutableLiveData;
 import io.reactivex.rxjava3.android.schedulers.AndroidSchedulers;
 
-import com.example.monsterapp.models.manager.battle.BattleManager;
-import com.example.monsterapp.models.manager.state.MonsterStateMachine;
+import com.example.monsterapp.models.entity.monster.state.StateCode;
+import com.example.monsterapp.models.manager.MonsterManager;
 import com.example.monsterapp.utils.Event.Event;
 import com.example.monsterapp.utils.Event.EventCode;
 import com.example.monsterapp.models.entity.monster.Monster;
 import com.example.monsterapp.models.entity.MonsterViewData;
-import com.example.monsterapp.models.entity.state.StateCode;
-import com.example.monsterapp.models.repository.MonsterRepository;
 import com.google.gson.Gson;
 import com.google.gson.reflect.TypeToken;
 
@@ -45,20 +43,14 @@ public class MonsterViewModel extends AndroidViewModel{
     @NonNull private final MutableLiveData<MonsterViewData> monsterViewLiveData = new MutableLiveData<>();
     /** ボタンの活性状態を管理するLiveData */
     @NonNull private final MutableLiveData<Map<EventCode, Boolean>> buttonStatesLiveData =new MutableLiveData<>();
+    /** loadingボタンを管理するLiveData */
+    @NonNull private final MutableLiveData<Boolean> loadingModalLiveData = new MutableLiveData<>();
 
-    // Models
-    /** モンスター情報を管理 */
-    @Nullable private MonsterRepository repository = null;
-    /** 状態遷移を管理 */
-    @Nullable private MonsterStateMachine monsterStateMachine = null;
-
+    /** Model */
+    @Nullable private MonsterManager monsterManager = null;
     /** disposable */
     @NonNull private final CompositeDisposable disposables = new CompositeDisposable();
-
-    /**
-     * モンスター描画データの管理マップ
-     * モンスターの状態毎に描画データを管理する
-     */
+    /** モンスター描画データの管理マップ */
     @NonNull private Map<StateCode, MonsterViewData> monsterViewDataMap = new HashMap<>();
 
     /**
@@ -72,84 +64,37 @@ public class MonsterViewModel extends AndroidViewModel{
         Map<EventCode, Boolean> btnStates = new HashMap<>();
         btnStates.put(EventCode.FEED, true);
         btnStates.put(EventCode.CURE, true);
-        btnStates.put(EventCode.BATTLE, true);
+        btnStates.put(EventCode.BLE_BATTLE, true);
         btnStates.put(EventCode.TOILET, true);
         btnStates.put(EventCode.RESET, true);
         buttonStatesLiveData.setValue(btnStates);
 
+        loadingModalLiveData.setValue(false);
+
         // 描画データをロード
         loadViewData(application);
 
-        // モンスター情報が更新された際に通知を受け取る
-        repository = MonsterRepository.getInstance(application);
+        monsterManager = new MonsterManager(application);
         disposables.add(
-                repository.getMonsterBehaviorSubject()
-                .observeOn(AndroidSchedulers.mainThread())
-                .subscribe(
-                        newMonster -> {
-                            if (monsterStateMachine == null) {
-                                initMonsterStateMachine();
-                                monsterStateMachine.start(newMonster.stateCode);
-                            }
-                            fetchMonsterData(newMonster);
-                        },
-                        throwable -> Log.d("callback event","monster is updated")
-                )
-        );
-
-
-    }
-
-    /**
-     * ステートマシンの初期化処理
-     */
-    private void initMonsterStateMachine() {
-        // 状態管理の初期化
-        monsterStateMachine = new MonsterStateMachine();
-        // 状態が更新された際に通知を受け取る
-        disposables.add(
-                monsterStateMachine.getStateBehaviorSubject()
+                monsterManager.getMonsterSubject()
+                        .distinctUntilChanged() // 同じデータをフィルタリング
                         .observeOn(AndroidSchedulers.mainThread())
                         .subscribe(
-                                newState -> {
-                                    Monster monster = monsterLiveData.getValue();
-                                    if(monster == null || repository == null) { return; }
-                                    monster.stateCode = newState.stateCode;
-                                    repository.updateMonster(monster);
-                                    fetchMonsterData(monster);
-                                },
-                                throwable -> Log.e("get state error", "cannot monster state type", throwable)
+                                this::fetchMonsterData,
+                                throwable -> Log.d("update Error", "monster cannot be updated")
                         )
         );
     }
 
-    /**
-     * 対戦管理クラスの初期化処理
-     * @param battleManager 対戦管理クラス
-     */
-    private void initBattleManager(BattleManager battleManager) {
-        disposables.add(
-                battleManager.getMonsterBehaviorSubject()
-                        .observeOn(AndroidSchedulers.mainThread())
-                        .subscribe(
-                                newBattleData -> {
-                                    if(monsterStateMachine == null || repository == null) { return; }
-                                    if(newBattleData.event == null) { return; }
-                                    monsterStateMachine.handleEvent(newBattleData.event);
-                                    repository.updateMonster(newBattleData.monster);
-                                    fetchMonsterData(newBattleData.monster);
-                                },
-                                throwable -> Log.d("callback event","monster is updated")
-                        )
-        );
-    }
+
 
     @Override
     protected void onCleared() {
         Log.d("LifeCycleEvent ViewModel", "View Model is cleared");
         super.onCleared();
-        if (repository != null) {
-            repository.clear();
+
+        if (monsterManager != null) {
+            monsterManager.clear();
         }
         // 購読を解除
         disposables.clear();
@@ -178,24 +123,39 @@ public class MonsterViewModel extends AndroidViewModel{
     public MutableLiveData<MonsterViewData> getMonsterViewLiveData() { return monsterViewLiveData; }
 
     /**
+     * loadingモーダルの表示有無を取得する
+     * @return loadingモーダルの表示有無
+     */
+    @NonNull
+    public MutableLiveData<Boolean> getLoadingModalLiveData() {
+        return loadingModalLiveData;
+    }
+
+    /**
      * ユーザのアクションイベント
      * @param event　イベント
      */
     public void onClickEvent(@NonNull Event event) {
-        if (repository == null || monsterStateMachine == null) { return; }
-        Log.d("onClick event", String.valueOf(event.eventCode));
+        if (monsterManager == null) { return; }
 
-        if (event.eventCode == EventCode.BATTLE) {
-            //TODO BLE通信開始
+        // 「対戦する」ボタン押下時、通信中モーダルを表示する
+        // 他ボタンイベントを受け付けない
+        if (event.eventCode == EventCode.BLE_BATTLE) {
             Log.d("battle event", String.valueOf(event.eventCode));
+            loadingModalLiveData.setValue(true);
+
+            Map<EventCode, Boolean> buttonStatesMap = buttonStatesLiveData.getValue();
+            if(buttonStatesMap == null) { return; }
+            for (Map.Entry<EventCode, Boolean> entry: buttonStatesMap.entrySet()) {
+                entry.setValue(false);
+            }
+            buttonStatesLiveData.postValue(buttonStatesMap);
         }
-        else {
-            monsterStateMachine.handleEvent(event);
-        }
+        monsterManager.handleEvent(event);
     }
 
     /**
-     * モンスター情報を更新する
+     * Modelのデータと同期をとる
      * @param newMonster 新しいモンスター情報
      */
     private void fetchMonsterData(@Nullable Monster newMonster) {
@@ -215,6 +175,7 @@ public class MonsterViewModel extends AndroidViewModel{
                 entry.setValue(true);
             }
         }
+        buttonStatesLiveData.postValue(buttonStatesMap);
 
         // モンスター情報を更新する
         monsterLiveData.postValue(newMonster);
@@ -260,6 +221,4 @@ public class MonsterViewModel extends AndroidViewModel{
 
         return stringBuilder.toString();
     }
-
-
 }

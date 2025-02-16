@@ -12,7 +12,7 @@ import androidx.sqlite.db.SupportSQLiteDatabase;
 
 import com.example.monsterapp.models.entity.monster.Monster;
 import com.example.monsterapp.models.dao.MonsterDao;
-import com.example.monsterapp.models.entity.state.StateCode;
+import com.example.monsterapp.models.entity.monster.state.StateCode;
 import com.example.monsterapp.models.room.TypeConverters.StateCodeConverter;
 
 import java.util.concurrent.ExecutorService;

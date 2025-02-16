@@ -1,13 +1,13 @@
-package com.example.monsterapp.models.entity.state.permanentState;
+package com.example.monsterapp.models.entity.monster.state.permanentState;
 
 import android.annotation.SuppressLint;
 
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 
+import com.example.monsterapp.models.entity.monster.state.State;
+import com.example.monsterapp.models.entity.monster.state.StateCode;
 import com.example.monsterapp.utils.Event.Event;
-import com.example.monsterapp.models.entity.state.State;
-import com.example.monsterapp.models.entity.state.StateCode;
 import com.example.monsterapp.models.manager.state.StateMachine;
 
 import java.time.LocalTime;

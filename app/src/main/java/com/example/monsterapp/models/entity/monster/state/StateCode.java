@@ -1,4 +1,4 @@
-package com.example.monsterapp.models.entity.state;
+package com.example.monsterapp.models.entity.monster.state;
 
 /**
  * Stateコード

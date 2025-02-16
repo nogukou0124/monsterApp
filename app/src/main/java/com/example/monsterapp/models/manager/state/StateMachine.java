@@ -5,9 +5,9 @@ import android.util.Log;
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 
+import com.example.monsterapp.models.entity.monster.state.State;
+import com.example.monsterapp.models.entity.monster.state.StateCode;
 import com.example.monsterapp.utils.Event.Event;
-import com.example.monsterapp.models.entity.state.State;
-import com.example.monsterapp.models.entity.state.StateCode;
 
 import java.util.ArrayList;
 import java.util.HashMap;

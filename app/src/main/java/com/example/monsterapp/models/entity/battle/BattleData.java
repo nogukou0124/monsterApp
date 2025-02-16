@@ -10,15 +10,11 @@ import com.example.monsterapp.utils.Event.Event;
  * 対戦データ
  */
 public class BattleData {
-    @NonNull public Monster monster;
-    @Nullable public Event event;
+    @NonNull public BattleStatus battleStatus;
+    public int hp;
 
-    public BattleData(@NonNull Monster monster) {
-        this.monster = monster;
-    }
-
-    public BattleData(@NonNull Monster monster, @Nullable Event event) {
-        this.monster = monster;
-        this.event = event;
+    public BattleData(@NonNull BattleStatus battleStatus, int hp) {
+        this.battleStatus = battleStatus;
+        this.hp = hp;
     }
 }

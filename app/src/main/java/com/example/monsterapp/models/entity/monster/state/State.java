@@ -1,4 +1,4 @@
-package com.example.monsterapp.models.entity.state;
+package com.example.monsterapp.models.entity.monster.state;
 
 import android.annotation.SuppressLint;
 import android.util.Log;

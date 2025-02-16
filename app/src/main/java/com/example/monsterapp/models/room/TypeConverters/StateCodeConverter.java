@@ -2,7 +2,8 @@ package com.example.monsterapp.models.room.TypeConverters;
 
 import androidx.room.TypeConverter;
 
-import com.example.monsterapp.models.entity.state.StateCode;
+import com.example.monsterapp.models.entity.monster.state.StateCode;
+
 
 public class StateCodeConverter {
     @TypeConverter
