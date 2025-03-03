@@ -7,6 +7,7 @@ import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 
 import com.example.monsterapp.models.entity.monster.state.StateCode;
+import com.example.monsterapp.models.manager.MonsterManager;
 import com.example.monsterapp.models.room.AppDatabase;
 import com.example.monsterapp.models.entity.monster.Monster;
 import com.example.monsterapp.models.dao.MonsterDao;
@@ -26,28 +27,29 @@ public class MonsterRepository {
     @Nullable private static MonsterRepository INSTANCE = null;
     /** DAO */
     @Nullable MonsterDao monsterDao = null;
-    /** モンスター情報 */
-    @Nullable Monster currentMonster = null;
+    @NonNull MonsterManager monsterManager;
 
     /**
      * コンストラクタ
      * @param application　コンテキスト
      */
-    private MonsterRepository(@NonNull Application application) {
+    private MonsterRepository(@NonNull Application application, @NonNull MonsterManager monsterManager) {
+        this.monsterManager = monsterManager;
         try {
             // データベース接続
             @NonNull AppDatabase db = AppDatabase.getDatabase(application);
             monsterDao = db.monsterDao();
 
             AppDatabase.databaseWriteExecutor.execute(() -> {
-                currentMonster = Objects.requireNonNull(monsterDao,"monsterDao is null").getByUid(1);
+                Monster monster = Objects.requireNonNull(monsterDao,"monsterDao is null").getByUid(1);
                 // データベースに情報が登録されていない場合は、デフォルトデータを挿入
-                if (currentMonster == null) {
+                if (monster == null) {
                     Log.e("database event", "No Monster found with uid = 1");
-                    currentMonster = new Monster(1, StateCode.NORMAL, "アグモン", 6, 3);
-                    monsterDao.insert(currentMonster);
-                    return;
+                    monster = new Monster(1, StateCode.NORMAL, "アグモン", 6, 3);
+                    monsterDao.insert(monster);
                 }
+                // モンスターの初期化に成功したらManagerに通知
+                monsterManager.onChangedMonster(monster);
             });
         } catch (Exception e) {
             Log.e("database event", "cannot get monster", e);
@@ -59,33 +61,14 @@ public class MonsterRepository {
      * @param application　コンテキスト
      * @return Singletonインスタンス
      */
-    public static MonsterRepository getInstance(Application application) {
+    public static MonsterRepository getInstance(Application application, MonsterManager monsterManager ) {
         // 起動時はインスタンスを生成する
         synchronized (MonsterRepository.class) {
             if (INSTANCE == null) {
-                INSTANCE = new MonsterRepository(application);
+                INSTANCE = new MonsterRepository(application, monsterManager);
             }
             return INSTANCE;
         }
-    }
-
-    /**
-     * モンスター情報を取得する
-     * @return モンスター
-     */
-    @NonNull
-    public Monster getMonster() {
-        AppDatabase.databaseWriteExecutor.execute(() -> {
-            currentMonster = Objects.requireNonNull(monsterDao,"monsterDao is null").getByUid(1);
-            // データベースに情報が登録されていない場合は、デフォルトデータを挿入
-            if (currentMonster == null) {
-                Log.e("database event", "No Monster found with uid = 1");
-                currentMonster = new Monster(1, StateCode.NORMAL, "アグモン", 6, 3);
-                monsterDao.insert(currentMonster);
-                return;
-            }
-        });
-        return currentMonster;
     }
 
     /**
@@ -101,6 +84,8 @@ public class MonsterRepository {
             } catch (Exception e) {
                 Log.e("database event", "cannot update monster", e);
             }
+            // 更新に成功したらManagerに通知
+            monsterManager.onChangedMonster(newMonster);
         });
     }
 }

@@ -1,4 +1,4 @@
-package com.example.monsterapp.views;
+package com.example.monsterapp.UI.views;
 
 import android.os.Bundle;
 
@@ -18,7 +18,7 @@ import android.widget.TextView;
 import com.example.monsterapp.utils.Event.Event;
 import com.example.monsterapp.utils.Event.EventCode;
 import com.example.monsterapp.R;
-import com.example.monsterapp.viewModels.MonsterViewModel;
+import com.example.monsterapp.UI.viewModels.MonsterViewModel;
 
 /**
  * 画面全体の描画を行うフラグメント
@@ -89,21 +89,20 @@ public class MonsterViewFragment extends Fragment {
         battleButton.setOnClickListener(v -> monsterViewModel.onClickEvent(new Event(EventCode.BLE_BATTLE)));
         @NonNull Button resetButton = view.findViewById(R.id.reset_btn);
         resetButton.setOnClickListener(v -> monsterViewModel.onClickEvent(new Event(EventCode.RESET)));
+        @NonNull Button escapeButton = view.findViewById(R.id.escape_btn);
+        escapeButton.setOnClickListener(v -> monsterViewModel.onClickEvent(new Event(EventCode.ESCAPE)));
+        @NonNull ProgressBar loadingBar = view.findViewById(R.id.loading);
 
         monsterViewModel.getButtonStatesLiveData().observe(getViewLifecycleOwner(), newButtonStates -> {
             if (newButtonStates == null) { return; }
             Log.d("update event","button states are updated");
-            feedButton.setVisibility(Boolean.TRUE.equals(newButtonStates.get(EventCode.FEED)) ? View.VISIBLE : View.INVISIBLE);
-            toiletButton.setVisibility(Boolean.TRUE.equals(newButtonStates.get(EventCode.TOILET)) ? View.VISIBLE : View.INVISIBLE);
-            cureButton.setVisibility(Boolean.TRUE.equals(newButtonStates.get(EventCode.CURE)) ? View.VISIBLE : View.INVISIBLE);
-            battleButton.setVisibility(Boolean.TRUE.equals(newButtonStates.get(EventCode.BLE_BATTLE)) ? View.VISIBLE : View.INVISIBLE);
-            resetButton.setVisibility(Boolean.TRUE.equals(newButtonStates.get(EventCode.RESET)) ? View.VISIBLE : View.INVISIBLE);
-        });
-
-        // loadingモーダルの表示状態の監視
-        @NonNull ProgressBar loadingModal = view.findViewById(R.id.loading);
-        monsterViewModel.getLoadingModalLiveData().observe(getViewLifecycleOwner(), isLoading -> {
-            loadingModal.setVisibility(isLoading ? View.VISIBLE : View.INVISIBLE);
+            feedButton.setVisibility(newButtonStates.isFeedBtnShown ? View.VISIBLE : View.GONE);
+            toiletButton.setVisibility(newButtonStates.isToiletBtnShown ? View.VISIBLE : View.GONE);
+            cureButton.setVisibility(newButtonStates.isCureBtnShown ? View.VISIBLE : View.GONE);
+            battleButton.setVisibility(newButtonStates.isBattleBtnShown ? View.VISIBLE : View.GONE);
+            resetButton.setVisibility(newButtonStates.isResetBtnShown ? View.VISIBLE : View.GONE);
+            escapeButton.setVisibility(newButtonStates.isEscapeBtnShown ? View.VISIBLE : View.GONE);
+            loadingBar.setVisibility(newButtonStates.isLoadingShown ? View.VISIBLE : View.GONE);
         });
     }
 }

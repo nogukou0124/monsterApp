@@ -9,9 +9,7 @@ import com.example.monsterapp.models.entity.monster.state.State;
 import com.example.monsterapp.models.entity.monster.state.StateCode;
 import com.example.monsterapp.utils.Event.Event;
 
-import java.util.ArrayList;
 import java.util.HashMap;
-import java.util.List;
 import java.util.Map;
 
 /**
@@ -21,9 +19,9 @@ public class StateMachine {
     /** StateMap */
     private @NonNull Map<StateCode, State> stateMap = new HashMap<>();
     /** 現在のState */
-    private @Nullable State currentState;
-    /** State履歴　*/
-    private @NonNull List<StateCode> stateHistory = new ArrayList<>();
+    public @Nullable State currentState;
+    /** １つ前のState　*/
+    private @Nullable State preState;
 
     /**
      * コンストラクタ
@@ -40,28 +38,27 @@ public class StateMachine {
     }
 
     /**
-     * 状態のSetter
+     * 現在状態のSetter
      * @param stateCode　状態コード
      */
     public void setCurrentState(@NonNull StateCode stateCode) {
         currentState = stateMap.get(stateCode);
-        if (currentState != null) {
-            stateHistory.add(currentState.stateCode);
-            currentState.onEnter();
+        if (currentState == null) {
+            throw new NullPointerException("存在しない状態に遷移できません");
         }
     }
 
     /**
-     * 状態遷移の履歴から指定位置の状態を取得する
-     * @param index 指定位置(カレントは0)
-     * @return 指定した状態
+     * 現在状態のgetter
+     * @return 現在の状態
      */
-    @Nullable
-    public State getState(int index) {
-        if (stateHistory.isEmpty()) { return null; }
-        StateCode stateCode =  stateHistory.get((stateHistory.size() - 1) - index);
-        return stateMap.get(stateCode);
-    }
+    @Nullable public State getCurrentState() { return currentState; }
+
+    /**
+     * 1つ前状態のgetter
+     * @return 1つ前の状態
+     */
+    @Nullable public State getPreState() { return preState; }
 
     /**
      * 状態遷移関数
@@ -69,10 +66,15 @@ public class StateMachine {
      */
     public void transition(@NonNull StateCode nextStateCode) {
         if (currentState != null) {
+            preState = currentState;
             currentState.onExit();
         }
 
-        setCurrentState(nextStateCode);
+        currentState = stateMap.get(nextStateCode);
+        if (currentState == null) {
+            return;
+        }
+        currentState.onEnter();
     }
 
     /**
@@ -83,7 +85,6 @@ public class StateMachine {
             currentState.onExit();
         }
         currentState = null;
-        stateHistory = new ArrayList<>();
         stateMap = new HashMap<>();
     }
 

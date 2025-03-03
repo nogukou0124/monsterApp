@@ -42,9 +42,6 @@ public abstract class AppDatabase extends RoomDatabase {
                 }
             }
         }
-        if (INSTANCE == null) {
-            Log.e("AppDatabase", "Database instance is null after initialization.");
-        }
         return INSTANCE;
     }
 

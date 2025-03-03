@@ -13,7 +13,7 @@ import androidx.core.content.ContextCompat;
 import androidx.fragment.app.FragmentManager;
 import androidx.fragment.app.FragmentTransaction;
 
-import com.example.monsterapp.views.MonsterViewFragment;
+import com.example.monsterapp.UI.views.MonsterViewFragment;
 
 public class MainActivity extends AppCompatActivity {
 

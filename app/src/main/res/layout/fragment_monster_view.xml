@@ -6,26 +6,26 @@
     xmlns:app="http://schemas.android.com/apk/res-auto"
     android:orientation="vertical"
     android:gravity="center"
-    android:layout_marginBottom="30dp"
-    tools:context=".views.MonsterViewFragment"
+    tools:context=".UI.views.MonsterViewFragment"
     android:background="@color/white">
 
+　　　<!--モンスター描画部分-->
     <view
         android:id="@+id/monster_view"
-        class="com.example.monsterapp.views.MonsterView"
+        class="com.example.monsterapp.UI.views.MonsterView"
         android:layout_width="match_parent"
         android:layout_height="0dp"
         android:gravity="center"
         android:layout_weight="4"
         android:orientation="vertical"
-        android:paddingBottom="20dp"
-        />
+        android:paddingBottom="20dp" />
 
+    <!--モンスター情報表示部分-->
     <LinearLayout
         android:layout_width="match_parent"
         android:layout_height="0dp"
-        android:layout_weight="2"
-        android:orientation="vertical"
+        android:layout_weight="1"
+        android:orientation="horizontal"
         android:gravity="center"
         >
 
@@ -36,7 +36,7 @@
             android:gravity="center"
             android:textSize="20sp"
             android:textStyle="bold"
-             />
+            />
 
         <TextView
             android:id="@+id/monster_hp"
@@ -55,76 +55,72 @@
             android:textSize="20sp"
             android:textStyle="bold"
             />
-
     </LinearLayout>
 
     <LinearLayout
+        android:id="@+id/normal"
         android:layout_width="match_parent"
         android:layout_height="0dp"
-        android:layout_weight="4"
-        >
-        <FrameLayout
+        android:layout_marginLeft="50dp"
+        android:layout_marginRight="50dp"
+        android:gravity="center"
+        android:layout_weight="5"
+        android:orientation="vertical">
+
+        <!--ボタン部分(通常時)-->
+        <Button
+            android:id="@+id/feed_btn"
             android:layout_width="match_parent"
-            android:layout_marginBottom="16dp"
-            android:layout_height="match_parent">
+            android:layout_height="50dp"
+            android:layout_margin="10dp"
+            android:text="@string/feed_btn" />
 
-            <LinearLayout
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:layout_marginLeft="50dp"
-                android:layout_marginRight="50dp"
-                android:gravity="center"
-                android:orientation="vertical">
+        <Button
+            android:id="@+id/toilet_btn"
+            android:layout_width="match_parent"
+            android:layout_height="50dp"
+            android:layout_margin="10dp"
+            android:text="@string/toilet_btn" />
 
-                <Button
-                    android:id="@+id/feed_btn"
-                    android:layout_width="match_parent"
-                    android:layout_height="50dp"
-                    android:layout_margin="10dp"
-                    android:text="@string/feed_btn" />
+        <Button
+            android:id="@+id/cure_btn"
+            android:layout_width="match_parent"
+            android:layout_height="50dp"
+            android:layout_margin="10dp"
+            android:text="@string/cure_btn" />
 
-                <Button
-                    android:id="@+id/toilet_btn"
-                    android:layout_width="match_parent"
-                    android:layout_height="50dp"
-                    android:layout_margin="10dp"
-                    android:text="@string/toilet_btn" />
+        <Button
+            android:id="@+id/battle_btn"
+            android:layout_width="match_parent"
+            android:layout_height="50dp"
+            android:layout_margin="10dp"
+            android:text="@string/battle_btn" />
 
-                <Button
-                    android:id="@+id/cure_btn"
-                    android:layout_width="match_parent"
-                    android:layout_height="50dp"
-                    android:layout_margin="10dp"
-                    android:text="@string/cure_btn" />
+        <Button
+            android:id="@+id/reset_btn"
+            android:layout_width="match_parent"
+            android:layout_height="50dp"
+            android:layout_margin="10dp"
+            android:text="@string/reset_btn" />
 
-                <Button
-                    android:id="@+id/battle_btn"
-                    android:layout_width="match_parent"
-                    android:layout_height="50dp"
-                    android:layout_margin="10dp"
-                    android:text="@string/buttle_btn" />
+        <!--ボタン部分(NPC対戦発生時)-->
+        <Button
+            android:id="@+id/escape_btn"
+            android:layout_width="match_parent"
+            android:layout_height="50dp"
+            android:layout_margin="10dp"
+            android:text="@string/escape_btn" />
 
-                <Button
-                    android:id="@+id/reset_btn"
-                    android:layout_width="match_parent"
-                    android:layout_height="50dp"
-                    android:layout_margin="10dp"
-                    android:text="@string/reset_btn" />
-            </LinearLayout>
-
-            <ProgressBar
-                android:id="@+id/loading"
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:layout_gravity="center"
-                app:layout_constraintTop_toTopOf="parent"
-                app:layout_constraintBottom_toBottomOf="parent"
-                app:layout_constraintStart_toStartOf="parent"
-                app:layout_constraintEnd_toEndOf="parent" />
-        </FrameLayout>
+        <!--ボタン部分(通信対戦発生時)-->
+        <ProgressBar
+            android:id="@+id/loading"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_gravity="center"
+            app:layout_constraintTop_toTopOf="parent"
+            app:layout_constraintBottom_toBottomOf="parent"
+            app:layout_constraintStart_toStartOf="parent"
+            app:layout_constraintEnd_toEndOf="parent" />
     </LinearLayout>
-
-
-
 
 </LinearLayout>

@@ -1,4 +1,4 @@
-package com.example.monsterapp.views;
+package com.example.monsterapp.UI.views;
 
 import android.animation.ValueAnimator;
 import android.annotation.SuppressLint;

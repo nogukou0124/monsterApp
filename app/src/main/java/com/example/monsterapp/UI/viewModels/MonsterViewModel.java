@@ -1,4 +1,4 @@
-package com.example.monsterapp.viewModels;
+package com.example.monsterapp.UI.viewModels;
 
 import android.annotation.SuppressLint;
 import android.app.Application;
@@ -12,6 +12,8 @@ import androidx.lifecycle.LiveData;
 import androidx.lifecycle.MutableLiveData;
 import io.reactivex.rxjava3.android.schedulers.AndroidSchedulers;
 
+import com.example.monsterapp.UI.UIButtonState;
+import com.example.monsterapp.models.entity.battle.BattleStatus;
 import com.example.monsterapp.models.entity.monster.state.StateCode;
 import com.example.monsterapp.models.manager.MonsterManager;
 import com.example.monsterapp.utils.Event.Event;
@@ -42,9 +44,7 @@ public class MonsterViewModel extends AndroidViewModel{
     /** モンスターの描画データを管理するLiveData */
     @NonNull private final MutableLiveData<MonsterViewData> monsterViewLiveData = new MutableLiveData<>();
     /** ボタンの活性状態を管理するLiveData */
-    @NonNull private final MutableLiveData<Map<EventCode, Boolean>> buttonStatesLiveData =new MutableLiveData<>();
-    /** loadingボタンを管理するLiveData */
-    @NonNull private final MutableLiveData<Boolean> loadingModalLiveData = new MutableLiveData<>();
+    @NonNull private final MutableLiveData<UIButtonState> buttonStatesLiveData =new MutableLiveData<>();
 
     /** Model */
     @Nullable private MonsterManager monsterManager = null;
@@ -60,27 +60,29 @@ public class MonsterViewModel extends AndroidViewModel{
     @SuppressLint("CheckResult")
     public MonsterViewModel(Application application) {
         super(application);
-        
-        Map<EventCode, Boolean> btnStates = new HashMap<>();
-        btnStates.put(EventCode.FEED, true);
-        btnStates.put(EventCode.CURE, true);
-        btnStates.put(EventCode.BLE_BATTLE, true);
-        btnStates.put(EventCode.TOILET, true);
-        btnStates.put(EventCode.RESET, true);
-        buttonStatesLiveData.setValue(btnStates);
 
-        loadingModalLiveData.setValue(false);
+        // 通常時のボタンを表示する
+        UIButtonState uiButtonState = new UIButtonState();
+        uiButtonState.setState(1);
+        buttonStatesLiveData.setValue(uiButtonState);
 
         // 描画データをロード
         loadViewData(application);
 
         monsterManager = new MonsterManager(application);
         disposables.add(
-                monsterManager.getMonsterSubject()
-                        .distinctUntilChanged() // 同じデータをフィルタリング
+                monsterManager.monsterSubject
                         .observeOn(AndroidSchedulers.mainThread())
                         .subscribe(
                                 this::fetchMonsterData,
+                                throwable -> Log.d("update Error", "monster cannot be updated")
+                        )
+        );
+        disposables.add(
+                monsterManager.battleStatusSubject
+                        .observeOn(AndroidSchedulers.mainThread())
+                        .subscribe(
+                                this::handleBattleStatus,
                                 throwable -> Log.d("update Error", "monster cannot be updated")
                         )
         );
@@ -113,7 +115,7 @@ public class MonsterViewModel extends AndroidViewModel{
      * @return ボタンの活性状態
      */
     @NonNull
-    public MutableLiveData<Map<EventCode, Boolean>> getButtonStatesLiveData() { return buttonStatesLiveData; }
+    public MutableLiveData<UIButtonState> getButtonStatesLiveData() { return buttonStatesLiveData; }
 
     /**
      * モンスターの描画データを取得する
@@ -121,15 +123,6 @@ public class MonsterViewModel extends AndroidViewModel{
      */
     @NonNull
     public MutableLiveData<MonsterViewData> getMonsterViewLiveData() { return monsterViewLiveData; }
-
-    /**
-     * loadingモーダルの表示有無を取得する
-     * @return loadingモーダルの表示有無
-     */
-    @NonNull
-    public MutableLiveData<Boolean> getLoadingModalLiveData() {
-        return loadingModalLiveData;
-    }
 
     /**
      * ユーザのアクションイベント
@@ -142,14 +135,10 @@ public class MonsterViewModel extends AndroidViewModel{
         // 他ボタンイベントを受け付けない
         if (event.eventCode == EventCode.BLE_BATTLE) {
             Log.d("battle event", String.valueOf(event.eventCode));
-            loadingModalLiveData.setValue(true);
 
-            Map<EventCode, Boolean> buttonStatesMap = buttonStatesLiveData.getValue();
-            if(buttonStatesMap == null) { return; }
-            for (Map.Entry<EventCode, Boolean> entry: buttonStatesMap.entrySet()) {
-                entry.setValue(false);
-            }
-            buttonStatesLiveData.postValue(buttonStatesMap);
+            UIButtonState newUiButtonState = new UIButtonState();
+            newUiButtonState.setState(2);
+            buttonStatesLiveData.postValue(newUiButtonState);
         }
         monsterManager.handleEvent(event);
     }
@@ -161,24 +150,39 @@ public class MonsterViewModel extends AndroidViewModel{
     private void fetchMonsterData(@Nullable Monster newMonster) {
         if (newMonster == null) { return; }
         if (buttonStatesLiveData.getValue() == null) { return; }
-
         // 描画データを更新する
         monsterViewLiveData.postValue(monsterViewDataMap.get(newMonster.stateCode));
 
-        // ボタンの活性状態を更新する
-        Map<EventCode, Boolean> buttonStatesMap = buttonStatesLiveData.getValue();
-        for (Map.Entry<EventCode, Boolean> entry: buttonStatesMap.entrySet()) {
-            if (newMonster.stateCode == StateCode.DEATH) {
-                entry.setValue(entry.getKey() == EventCode.RESET);
-            }
-            else {
-                entry.setValue(true);
-            }
+        UIButtonState newUiButtonState = new UIButtonState();
+        // 死亡状態であれば、「リセット」ボタンのみ表示
+        if (newMonster.stateCode == StateCode.DEATH) {
+            newUiButtonState.setState(4);
         }
-        buttonStatesLiveData.postValue(buttonStatesMap);
+        // 死亡状態でなければ通常時のボタン表示
+        else {
+            newUiButtonState.setState(1);
+        }
+        // ボタンの活性状態を更新する
+        buttonStatesLiveData.postValue(newUiButtonState);
 
         // モンスター情報を更新する
         monsterLiveData.postValue(newMonster);
+    }
+
+    /**
+     * 対戦情報を基に画面を更新する
+     * @param newBattleStatus　新しい対戦情報
+     */
+    private void handleBattleStatus(@NonNull BattleStatus newBattleStatus) {
+        UIButtonState uiButtonState = new UIButtonState();
+
+        // NPC対戦が発生した場合、「逃げる」ボタンを押下できるようにする
+        if (newBattleStatus == BattleStatus.NPC_BATTLE_TRIGGERED) {
+            uiButtonState.setState(3);
+        } else {
+            uiButtonState.setState(1);
+        }
+        buttonStatesLiveData.postValue(uiButtonState);
     }
 
     /**

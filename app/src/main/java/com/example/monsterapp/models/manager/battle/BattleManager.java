@@ -5,93 +5,121 @@ import android.util.Log;
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 
-import com.example.monsterapp.models.entity.battle.BattleData;
 import com.example.monsterapp.models.entity.battle.BattleStatus;
 import com.example.monsterapp.models.entity.monster.Monster;
-import com.example.monsterapp.models.entity.monster.state.StateCode;
 import com.example.monsterapp.models.manager.MonsterManager;
+import com.example.monsterapp.models.manager.battle.npc.NPCBattleStrategy;
 import com.example.monsterapp.utils.Event.Event;
-import com.example.monsterapp.utils.Event.EventCode;
+import com.example.monsterapp.utils.battle.BattleUtils;
 
-import java.util.Random;
-import java.util.Timer;
-import java.util.TimerTask;
-
-import io.reactivex.rxjava3.subjects.BehaviorSubject;
+import java.util.concurrent.Executors;
+import java.util.concurrent.ScheduledExecutorService;
+import java.util.concurrent.TimeUnit;
 
 /**
  * 対戦管理クラス
  */
 public class BattleManager {
+    // State
+    /** 対戦前の自分のモンスター　*/
+    @Nullable private Monster preBattleMyMonster;
+    /** 自分のモンスター　*/
+    @Nullable private Monster myMonster;
+    /** 相手のモンスター　*/
+    @Nullable private Monster enemyMonster;
+
     /** Manager */
     @NonNull private MonsterManager monsterManager;
     /** Strategy */
     @Nullable private BattleStrategy battleStrategy;
 
-    /** 自分のモンスター */
-    @Nullable private Monster selfMonster;
-    /** 対戦前の自分のモンスター */
-    @Nullable private Monster initSelfMonster;
-    /** 相手のモンスター　*/
-    @Nullable private Monster enemyMonster;
+    /** NPC対戦発生時の開始待機処理スレッド */
+    @Nullable private Thread npcBattleWaitThread;
+
+
+    /** 時間タスクスケジューラ */
+    ScheduledExecutorService scheduler = Executors.newScheduledThreadPool(1);
+
 
     /**
      * コンストラクタ
      */
     public BattleManager(@NonNull MonsterManager monsterManager) {
         this.monsterManager = monsterManager;
-
-        // 12時間に一度、NPC対戦を始める
-        final int ONE_SECOND = 1000;
-        final int SECOND_PER_MINUTE = 60;
-        final int ONE_HOUR = ONE_SECOND * SECOND_PER_MINUTE * 60;
-        Timer timer = new Timer();
-        timer.schedule(new TimerTask() {
-            @Override
-            public void run() {
-                Log.d("TimerTask", "Task executed at: " + System.currentTimeMillis());
-                monsterManager.handleEvent(new Event(EventCode.NPC_BATTLE));
-
-            }
-        }, 0, 12 * ONE_HOUR);
+        executeNpcBattleScheduler();
     }
 
     /**
-     * プレイヤーモンスターの
-     * @param selfMonster 自分のモンスター
+     * NPC対戦のスケジューラーを起動させる
      */
-    public void setPlayerMonster(@NonNull Monster selfMonster) {
-        this.selfMonster = selfMonster;
+    public void executeNpcBattleScheduler() {
+        scheduler.scheduleWithFixedDelay(() -> {
+            Log.d("TimerTask", "Task executed at: " + System.currentTimeMillis());
+            battleStrategy = new NPCBattleStrategy(this);
+            monsterManager.postBattleStatus(BattleStatus.NPC_BATTLE_TRIGGERED);
+
+            // 5秒間待機したあと、NPC対戦を開始する
+            npcBattleWaitThread = new Thread(() ->{
+                try {
+                    Thread.sleep(5000);
+                    monsterManager.postBattleStatus(BattleStatus.NPC_BATTLE_START);
+                    startBattle();
+                } catch (InterruptedException e) {
+                    Log.e("handle event interruptedException", e.toString());
+                } catch (NullPointerException e) {
+                    Log.e("NullPointerException", e.toString());
+                }
+            });
+            npcBattleWaitThread.start();
+        }, 5 * 1000, BattleUtils.NPC_BATTLE_DURATION_TIME, TimeUnit.SECONDS);
+    }
+
+    /**
+     * NPC対戦を中止する
+     */
+    public void cancelNpcBattle() {
+        if (npcBattleWaitThread != null) {
+            npcBattleWaitThread.interrupt();
+            monsterManager.postBattleStatus(BattleStatus.IDLE);
+        }
+    }
+
+    /**
+     * 自分のモンスターと相手のモンスターを設定する
+     */
+    public void onBattleEvent(BattleStatus newBattleStatus, Monster newMyMonster) {
+        monsterManager.updateMonster(newMyMonster);
+    }
+
+    /**
+     * 対戦処理を進める
+     */
+    public void startBattle() {
+        // 対戦ロジックが設定されていない場合、対戦できないため終了
+        if (battleStrategy == null) {
+            throw new NullPointerException("対戦方式が正しく設定されませんでした");
+        }
+
+        // 対戦対象となる自分のモンスターが見つからない場合、対戦できないため終了
+        myMonster = monsterManager.getCurrentMonster();
+        if (myMonster == null) {
+            throw new NullPointerException("自分のモンスターが見つかりませんでした");
+        }
+        enemyMonster = battleStrategy.getEnemyMonster();
+
         // 対戦前のモンスター情報を残しておく（対戦後、元の情報に書き換えるため）
-        initSelfMonster = new Monster(
-                selfMonster.uid,
-                selfMonster.stateCode,
-                selfMonster.name,
-                selfMonster.hp,
-                selfMonster.power
+        preBattleMyMonster = new Monster(
+                myMonster.uid,
+                myMonster.stateCode,
+                myMonster.name,
+                myMonster.hp,
+                myMonster.power
         );
+
+        // 対戦処理
+        battleStrategy.executeBattle(myMonster, enemyMonster);
     }
 
-    /**
-     * モンスターの状態を元にダメージを計算する
-     * @param attacker 攻撃者
-     * @param defender 被攻撃者
-     */
-    public int getDamage(Monster attacker, Monster defender) {
-        Random random = new Random();
-        // 命中率は基本80％
-        // ただし、攻撃者が病気の場合は20%低下、被攻撃者が病気の場合15%増加
-        double hitRate = 0.8;
-        hitRate = attacker.stateCode == StateCode.SICK ? hitRate - 0.2 : hitRate;
-        hitRate = defender.stateCode == StateCode.SICK ? hitRate + 0.15 : hitRate;
-
-        // 命中した場合は、攻撃者の攻撃力分ダメージを与える。
-        // 攻撃を外した場合は、0ダメージ。
-        if (random.nextDouble() <= hitRate) {
-            return attacker.power;
-        }
-        else {
-            return 0;
-        }
+    public void endBattle() {
     }
 }

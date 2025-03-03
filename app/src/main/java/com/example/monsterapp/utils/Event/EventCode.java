@@ -16,4 +16,5 @@ public enum EventCode {
     LOSE,
     NPC_BATTLE,
     BLE_BATTLE,
+    ESCAPE,
 }

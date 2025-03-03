@@ -1,23 +1,28 @@
 package com.example.monsterapp.models.manager.state;
 
-import android.util.Log;
-
 import androidx.annotation.NonNull;
-import androidx.annotation.Nullable;
 
+import com.example.monsterapp.models.entity.monster.Monster;
 import com.example.monsterapp.models.entity.monster.state.State;
 import com.example.monsterapp.models.entity.monster.state.StateCode;
-import com.example.monsterapp.models.entity.monster.state.permanentState.DeathState;
-import com.example.monsterapp.models.entity.monster.state.permanentState.NormalState;
-import com.example.monsterapp.models.entity.monster.state.permanentState.SickState;
-import com.example.monsterapp.models.entity.monster.state.permanentState.SleepState;
-import com.example.monsterapp.models.entity.monster.state.temporaryState.TemporaryState;
+import com.example.monsterapp.models.entity.monster.state.permanent.DeathState;
+import com.example.monsterapp.models.entity.monster.state.permanent.NormalState;
+import com.example.monsterapp.models.entity.monster.state.permanent.SickState;
+import com.example.monsterapp.models.entity.monster.state.permanent.SleepState;
+import com.example.monsterapp.models.entity.monster.state.temporary.AttackState;
+import com.example.monsterapp.models.entity.monster.state.temporary.AttackedState;
+import com.example.monsterapp.models.entity.monster.state.temporary.DenyState;
+import com.example.monsterapp.models.entity.monster.state.temporary.JoyState;
+import com.example.monsterapp.models.entity.monster.state.temporary.MealState;
+import com.example.monsterapp.models.entity.monster.state.temporary.SadState;
 import com.example.monsterapp.models.manager.MonsterManager;
 import com.example.monsterapp.utils.Event.Event;
 import com.example.monsterapp.utils.Event.EventCode;
+import com.example.monsterapp.utils.state.StateUtils;
 
-import java.util.Timer;
-import java.util.TimerTask;
+import java.util.concurrent.Executors;
+import java.util.concurrent.ScheduledExecutorService;
+import java.util.concurrent.TimeUnit;
 
 /**
  * モンスターステートマシンクラス
@@ -26,9 +31,9 @@ public class MonsterStateMachine {
     /** Manager */
     @NonNull MonsterManager monsterManager;
     /** state machine */
-    @NonNull StateMachine stateMachine = new StateMachine();
-    /** 時間遷移タスク */
-    @Nullable Timer timer = null;
+    @NonNull StateMachine stateMachine;
+    /** 時間タスクスケジューラ */
+    ScheduledExecutorService scheduler = Executors.newScheduledThreadPool(1);
 
     /**
      * コンストラクタ
@@ -36,16 +41,17 @@ public class MonsterStateMachine {
     public MonsterStateMachine(@NonNull MonsterManager monsterManager) {
         this.monsterManager = monsterManager;
         // state
+        stateMachine = new StateMachine();
         stateMachine.addState(new NormalState(stateMachine, StateCode.NORMAL));
         stateMachine.addState(new SickState(stateMachine, StateCode.SICK));
         stateMachine.addState(new DeathState(stateMachine, StateCode.DEATH));
-        stateMachine.addState(new TemporaryState(stateMachine, StateCode.JOY));
-        stateMachine.addState(new TemporaryState(stateMachine, StateCode.SAD));
-        stateMachine.addState(new TemporaryState(stateMachine, StateCode.DENY));
-        stateMachine.addState(new TemporaryState(stateMachine, StateCode.MEAL));
-        stateMachine.addState(new TemporaryState(stateMachine, StateCode.ATTACK));
-        stateMachine.addState(new TemporaryState(stateMachine, StateCode.ATTACKED));
         stateMachine.addState(new SleepState(stateMachine, StateCode.SLEEP));
+        stateMachine.addState(new JoyState(stateMachine, StateCode.JOY));
+        stateMachine.addState(new SadState(stateMachine, StateCode.SAD));
+        stateMachine.addState(new DenyState(stateMachine, StateCode.DENY));
+        stateMachine.addState(new MealState(stateMachine, StateCode.MEAL));
+        stateMachine.addState(new AttackState(stateMachine, StateCode.ATTACK));
+        stateMachine.addState(new AttackedState(stateMachine, StateCode.ATTACKED));
     }
 
     /**
@@ -54,21 +60,9 @@ public class MonsterStateMachine {
      */
     public void start(@NonNull StateCode initialStateCode) {
         stateMachine.setCurrentState(initialStateCode);
-        timer = new Timer();
-        final int ONE_SECOND = 1000;
-        final int SECOND_PER_MINUTE = 60;
-        final int TIMER_MINUTE = 15;
-
-        // モンスターの状態は15分単位で変化する
-        // 15分毎に状態遷移の有無を確認するタスクを実行する
-        timer.schedule(new TimerTask() {
-            @Override
-            public void run() {
-                Log.d("TimerTask", "Task executed at: " + System.currentTimeMillis());
-                stateMachine.handleEvent(new Event(EventCode.TIME));
-
-            }
-        }, 0, TIMER_MINUTE * SECOND_PER_MINUTE * ONE_SECOND);
+        scheduler.scheduleWithFixedDelay(() -> {
+            stateMachine.handleEvent(new Event(EventCode.TIME));
+        }, 0, StateUtils.TIME_EVENT_DURATION_TIME, TimeUnit.SECONDS);
     }
 
     /**
@@ -76,10 +70,7 @@ public class MonsterStateMachine {
      */
     public void clear() {
         stateMachine.clear();
-        if (timer != null) {
-            timer.cancel();
-            timer = null;
-        }
+        scheduler.shutdown();
     }
 
     /**
@@ -87,28 +78,47 @@ public class MonsterStateMachine {
      * @param event イベント
      */
     public void handleEvent(@NonNull Event event) {
-        new Thread(() -> {
-            try {
-                stateMachine.handleEvent(event);
-                onStateChanged();
+        stateMachine.handleEvent(event);
 
-                // ５秒間スリープ
-                Thread.sleep(5000);
-                stateMachine.handleEvent(new Event(EventCode.RETURN));
-                onStateChanged();
-            } catch (InterruptedException e) {
-                Log.d("handle event interruptedException", e.toString());
-            }
-        }).start();
+        // モンスターの状態を更新する
+        State currentState = stateMachine.getCurrentState();
+
+        // nullは異常系のため、Managerに通知
+        if (currentState == null) {
+            throw new NullPointerException("状態遷移イベントに失敗しました");
+        }
+
+        updateState(currentState);
+
+        // 一時状態であれば、5秒間継続し前の状態に戻る
+        if (currentState.isTemporary()) {
+            new Thread(() -> {
+                try {
+                    Thread.sleep(StateUtils.TEMPORARY_DURATION_TIME);
+                    State preState = stateMachine.getPreState();
+
+                    if (preState == null) {
+                        throw new NullPointerException("状態遷移イベントに失敗しました");
+                    }
+                    stateMachine.transition(preState.stateCode);
+                    updateState(preState);
+                } catch (InterruptedException e) {
+                    throw new RuntimeException(e);
+                }
+            }).start();
+        }
     }
 
     /**
-     * コールバック処理（状態変更時）
+     * モンスターの状態を更新するメソッド
+     * @param newState 新しい状態
      */
-    private void onStateChanged() {
-        State newState = stateMachine.getState(0);
-        if (newState != null) {
-            monsterManager.updateState(newState);
+    public void updateState(State newState) {
+        Monster monster = monsterManager.getCurrentMonster();
+        if (monster == null) {
+            throw new NullPointerException("モンスターが存在しません");
         }
+        monster.stateCode = newState.stateCode;
+        monsterManager.updateMonster(monster);
     }
 }

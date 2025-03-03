@@ -6,6 +6,7 @@ import android.util.Log;
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 
+import com.example.monsterapp.models.entity.battle.BattleStatus;
 import com.example.monsterapp.models.entity.monster.Monster;
 import com.example.monsterapp.models.entity.monster.state.State;
 import com.example.monsterapp.models.manager.battle.BattleManager;
@@ -14,42 +15,40 @@ import com.example.monsterapp.models.repository.MonsterRepository;
 import com.example.monsterapp.utils.Event.Event;
 import com.example.monsterapp.utils.Event.EventCode;
 
-import io.reactivex.rxjava3.disposables.CompositeDisposable;
 import io.reactivex.rxjava3.subjects.BehaviorSubject;
 
 /**
  * Model全体を管理するクラス
  */
 public class MonsterManager {
+    // State
+    /** モンスター */
+    @Nullable private Monster currentMonster;
+
+    // Object
     /** Roomデータベース操作を行う */
-    @Nullable private MonsterRepository repository = null;
+    @NonNull private final MonsterRepository repository;
     /** 状態遷移を管理 */
     @Nullable private MonsterStateMachine monsterStateMachine = null;
     /** 対戦機能を管理　*/
-    @Nullable private BattleManager battleManager = null;
-    /** Subject */
-    @NonNull private final BehaviorSubject<Monster> monsterSubject = BehaviorSubject.create();
+    @NonNull private BattleManager battleManager;
+    /** Subject(モンスター) */
+    @NonNull public final BehaviorSubject<Monster> monsterSubject = BehaviorSubject.create();
+    /** Subject(対戦管理) */
+    @NonNull public final BehaviorSubject<BattleStatus> battleStatusSubject = BehaviorSubject.create();
 
+    /**
+     * コンストラクタ
+     * @param application application
+     */
     public MonsterManager(Application application) {
         // モンスター情報が更新された際に通知を受け取る
-        repository = MonsterRepository.getInstance(application);
-        @NonNull Monster monster = repository.getMonster();
-
-        // 初期状態をセットし、状態遷移を監視する
-        monsterStateMachine = new MonsterStateMachine(this);
-        monsterStateMachine.start(monster.stateCode);
-
+        repository = MonsterRepository.getInstance(application, this);
         battleManager = new BattleManager(this);
-
     }
 
-    @NonNull
-    public BehaviorSubject<Monster> getMonsterSubject() { return monsterSubject; }
-
     public void clear() {
-        repository = null;
         monsterStateMachine = null;
-        battleManager = null;
     }
 
     /**
@@ -57,31 +56,62 @@ public class MonsterManager {
      * @param event イベント
      */
     public void handleEvent(Event event) {
-        Log.d("handle event", String.valueOf(event.eventCode));
-        if (monsterStateMachine == null) { return; }
+        try {
+            Log.d("handle event", String.valueOf(event.eventCode));
+            if (monsterStateMachine == null) { return; }
 
-        // 通信対戦イベントの場合、通信を開始する
-        if (event.eventCode == EventCode.BLE_BATTLE) {
+            EventCode eventCode = event.eventCode;
 
+            if (eventCode == EventCode.ESCAPE) {
+                // NPC対戦を中止する
+                battleManager.cancelNpcBattle();
+                return;
+            }
+            // 対戦系のイベントは
+
+            if(eventCode == EventCode.BLE_BATTLE) {
+                Log.d("BLE Battle Event", "start connect");
+            }
+            else {
+                monsterStateMachine.handleEvent(event);
+            }
+        } catch (NullPointerException e) {
+            Log.e("NullPointerException", e.toString());
         }
-        else {
-            monsterStateMachine.handleEvent(event);
+    }
+
+    public void onChangedMonster(@NonNull Monster newMonster) {
+        currentMonster = newMonster;
+        // モンスターが初期化されたタイミングでステートマシンを起動する
+        if(monsterStateMachine == null) {
+            // 初期状態をセットし、状態遷移を開始する
+            monsterStateMachine = new MonsterStateMachine(this);
+            monsterStateMachine.start(newMonster.stateCode);
         }
+        Log.d("current state manager", newMonster.stateCode.toString());
+        monsterSubject.onNext(newMonster);
     }
 
     /**
      * モンスターの状態を更新する
-     * @param newState 新しい状態
+     * @param newMonster 新しいモンスター
      */
-    public void updateState(@NonNull State newState) {
-        if (repository == null) { return; }
-        Monster newMonster = repository.getMonster();
-
-        // モンスターの状態を更新しViewModelに通知する
-        newMonster.stateCode = newState.stateCode;
+    public void updateMonster(@NonNull Monster newMonster) {
         repository.updateMonster(newMonster);
-        monsterSubject.onNext(newMonster);
     }
 
+    /**
+     * 対戦状態を設定し、ViewModelに通知する
+     * @param newBattleStatus 新しい対戦状態
+     */
+    public void postBattleStatus(BattleStatus newBattleStatus) {
+        Log.d("battle Status change", newBattleStatus.toString());
+        battleStatusSubject.onNext(newBattleStatus);
+    }
 
+    /**
+     * モンスター情報のgetter
+     * @return 現在のモンスター
+     */
+    @Nullable public Monster getCurrentMonster() { return currentMonster; }
 }
