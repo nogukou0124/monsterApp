@@ -82,6 +82,11 @@ dependencies {
     // optional - Paging 3 Integration
     implementation(libs.androidx.room.paging)
 
+    // 既存の依存関係
+    implementation(libs.androidx.cardview)
+    // 必要に応じてMaterial Designも追加
+    implementation(libs.material.v140)
+
 }
 
 dependencies {

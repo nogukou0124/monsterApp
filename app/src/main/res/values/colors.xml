@@ -2,4 +2,17 @@
 <resources>
     <color name="black">#FF000000</color>
     <color name="white">#FFFFFFFF</color>
+    <color name="hp_green">#4CAF50</color>
+    <color name="hp_yellow">#FFC107</color>
+    <color name="hp_red">#F44336</color>
+
+    <!-- 新しいボタン色を追加 -->
+    <color name="feed_button">#66BB6A</color>
+    <color name="toilet_button">#42A5F5</color>
+    <color name="cure_button">#EC407A</color>
+    <color name="battle_button">#FF7043</color>
+    <color name="reset_button">#78909C</color>
+    <color name="escape_button">#FFD54F</color>
+
+    <color name="background_color">#ccffff</color>
 </resources>
