@@ -13,7 +13,7 @@ import android.view.View;
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 
-import com.example.monsterapp.ui.model.MonsterViewData;
+import com.example.monsterapp.ui.data.MonsterViewData;
 
 import java.util.ArrayList;
 import java.util.List;

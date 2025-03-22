@@ -22,9 +22,12 @@ import com.example.monsterapp.util.Event.EventCode;
 import com.example.monsterapp.R;
 import com.example.monsterapp.ui.viewModel.MonsterViewModel;
 
+import dagger.hilt.android.AndroidEntryPoint;
+
 /**
  * 画面全体の描画を行うフラグメント
  */
+@AndroidEntryPoint
 public class MonsterViewFragment extends Fragment {
 
     /** ViewModel */
@@ -102,12 +105,14 @@ public class MonsterViewFragment extends Fragment {
         toiletButton.setOnClickListener(v -> monsterViewModel.onClickEvent(new Event(EventCode.TOILET)));
         @NonNull Button cureButton = view.findViewById(R.id.cure_btn);
         cureButton.setOnClickListener(v -> monsterViewModel.onClickEvent(new Event(EventCode.CURE)));
-        @NonNull Button battleButton = view.findViewById(R.id.battle_btn);
-        battleButton.setOnClickListener(v -> monsterViewModel.onClickEvent(new Event(EventCode.BLE_BATTLE_TRIGGERED)));
         @NonNull Button resetButton = view.findViewById(R.id.reset_btn);
         resetButton.setOnClickListener(v -> monsterViewModel.onClickEvent(new Event(EventCode.RESET)));
+
+        @NonNull Button battleButton = view.findViewById(R.id.battle_btn);
+        battleButton.setOnClickListener(v -> monsterViewModel.onClickEvent(new Event(EventCode.BLE_BATTLE_TRIGGERED)));
         @NonNull Button escapeButton = view.findViewById(R.id.escape_btn);
         escapeButton.setOnClickListener(v -> monsterViewModel.onClickEvent(new Event(EventCode.ESCAPE)));
+
         @NonNull ProgressBar loadingBar = view.findViewById(R.id.loading);
 
         monsterViewModel.getButtonStatesLiveData().observe(getViewLifecycleOwner(), newButtonStates -> {

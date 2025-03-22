@@ -1,5 +1,7 @@
 package com.example.monsterapp.model.entity.monster;
 
+import androidx.annotation.NonNull;
+import androidx.annotation.Nullable;
 import androidx.room.ColumnInfo;
 import androidx.room.Entity;
 import androidx.room.PrimaryKey;
@@ -17,11 +19,11 @@ public class Monster {
 
     /** 名前　*/
     @ColumnInfo(name = "monster_name")
-    public String name;
+    @NonNull public String name;
 
     /** 状態 */
     @ColumnInfo(name = "monster_state")
-    public StateCode stateCode;
+    @NonNull public StateCode stateCode;
 
     /** 現在のHP */
     @ColumnInfo(name = "hp")
@@ -36,12 +38,20 @@ public class Monster {
     public int power;
 
     /** コンストラクタ */
-    public Monster(int uid, StateCode stateCode, String name, int hp, int maxHp, int power) {
+    public Monster(int uid, @NonNull StateCode stateCode, @NonNull String name, int hp, int maxHp, int power) {
         this.uid = uid;
         this.stateCode = stateCode;
         this.name = name;
         this.hp = hp;
         this.maxHp = maxHp;
         this.power = power;
+    }
+
+    /**
+     * モンスターの情報をコピーする
+     * @return コピーしたモンスター情報
+     */
+    public Monster copy() {
+        return new Monster(this.uid, this.stateCode, this.name, this.hp, this.maxHp, this.power);
     }
 }

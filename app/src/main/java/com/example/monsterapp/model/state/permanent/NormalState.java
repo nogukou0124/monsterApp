@@ -1,10 +1,7 @@
 package com.example.monsterapp.model.state.permanent;
 
 
-import static com.example.monsterapp.util.Event.EventCode.*;
-
 import android.annotation.SuppressLint;
-import android.util.Log;
 
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
@@ -12,7 +9,7 @@ import androidx.annotation.Nullable;
 import com.example.monsterapp.model.state.State;
 import com.example.monsterapp.model.state.StateCode;
 import com.example.monsterapp.util.Event.Event;
-import com.example.monsterapp.model.manager.state.StateMachine;
+import com.example.monsterapp.model.state.StateMachine;
 import com.example.monsterapp.util.state.StateUtils;
 
 /**

@@ -6,14 +6,14 @@ import android.util.Log;
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 
+import com.example.monsterapp.model.state.State;
 import com.example.monsterapp.model.state.StateCode;
-import com.example.monsterapp.model.manager.MonsterManager;
 import com.example.monsterapp.model.data.room.AppDatabase;
 import com.example.monsterapp.model.entity.monster.Monster;
 import com.example.monsterapp.model.data.dao.MonsterDao;
-import com.example.monsterapp.util.callback.MonsterUpdateListener;
 
-import java.util.Objects;
+import io.reactivex.Completable;
+import io.reactivex.rxjava3.subjects.BehaviorSubject;
 
 
 /**
@@ -25,33 +25,42 @@ public class MonsterRepository {
     @Nullable private static MonsterRepository INSTANCE = null;
     /** DAO */
     @Nullable MonsterDao monsterDao = null;
-    @NonNull MonsterUpdateListener monsterUpdateListener;
+
+    /** 変更を監視するためのSubject */
+    @NonNull final private BehaviorSubject<Monster> monsterSubject = BehaviorSubject.create();
 
     /**
      * コンストラクタ
      * @param application　コンテキスト
      */
-    private MonsterRepository(@NonNull Application application, @NonNull MonsterUpdateListener monsterUpdateListener) {
-        this.monsterUpdateListener = monsterUpdateListener;
+    private MonsterRepository(@NonNull Application application) {
         try {
-            // データベース接続
             @NonNull AppDatabase db = AppDatabase.getDatabase(application);
             monsterDao = db.monsterDao();
-
+            // 初期データの読み込みを非同期実行
             AppDatabase.databaseWriteExecutor.execute(() -> {
-                Monster monster = Objects.requireNonNull(monsterDao,"monsterDao is null").getByUid(1);
-                // データベースに情報が登録されていない場合は、デフォルトデータを挿入
-                if (monster == null) {
-                    Log.e("database event", "No Monster found with uid = 1");
-                    monster = new Monster(1, StateCode.NORMAL, "アグモン", 6, 6,  3);
-                    monsterDao.insert(monster);
+                try {
+                    if (monsterDao == null) { return; }
+                    Monster monster = monsterDao.getByUid(1);
+                    if (monster != null) {
+                        monsterSubject.onNext(monster);
+                    } else {
+                        // 初期データがない場合はデフォルトを作成
+                        Monster defaultMonster = createDefaultMonster();
+                        monsterDao.updateMonster(defaultMonster);
+                        monsterSubject.onNext(defaultMonster);
+                    }
+                } catch (Exception e) {
+                    Log.e("MonsterRepository", "初期データの読み込みに失敗しました", e);
                 }
-                // モンスターの初期化に成功したらManagerに通知
-                monsterUpdateListener.onUpdatedMonster(monster);
             });
         } catch (Exception e) {
-            Log.e("database event", "cannot get monster", e);
+            Log.e("MonsterRepository", "データベースの初期化に失敗しました", e);
         }
+    }
+
+    private Monster createDefaultMonster() {
+        return new Monster(1, StateCode.NORMAL, "アグモン", 6, 6, 3);
     }
 
     /**
@@ -59,38 +68,51 @@ public class MonsterRepository {
      * @param application　コンテキスト
      * @return Singletonインスタンス
      */
-    public static MonsterRepository getInstance(Application application, MonsterManager monsterManager ) {
+    public static MonsterRepository getInstance(Application application) {
         // 起動時はインスタンスを生成する
         synchronized (MonsterRepository.class) {
             if (INSTANCE == null) {
-                INSTANCE = new MonsterRepository(application, monsterManager);
+                INSTANCE = new MonsterRepository(application);
             }
             return INSTANCE;
         }
     }
 
+
     /**
-     * モンスター情報をリセットする
+     * モンスター情報を取得
+     * @param id モンスターのID
+     * @return モンスター情報のObservable
      */
-    public void reset() {
-        updateMonster(new Monster(1, StateCode.NORMAL, "アグモン", 6, 6,3));
+    @NonNull
+    public BehaviorSubject<Monster> getMonster(int id) {
+        return monsterSubject;
     }
 
     /**
-     * モンスター情報をセットする
-     * @param newMonster 新しいモンスター情報
+     * モンスターを更新する
+     * @param newMonster 新しいモンスター
      */
     public void updateMonster(@NonNull Monster newMonster) {
         AppDatabase.databaseWriteExecutor.execute(() -> {
             try {
                 // nullチェック（データベース接続前はnullの場合があるため）
-                if (monsterDao == null) { return; }
+                if (monsterDao == null) return;
                 monsterDao.updateMonster(newMonster);
+
+                // 成功したら監視元に通知
+                monsterSubject.onNext(newMonster);
             } catch (Exception e) {
                 Log.e("database event", "cannot update monster", e);
             }
-            // 更新に成功したらManagerに通知
-            monsterUpdateListener.onUpdatedMonster(newMonster);
         });
     }
+
+    /**
+     * モンスターのリセット
+     */
+    public void reset() {
+        updateMonster(createDefaultMonster());
+    }
+
 }

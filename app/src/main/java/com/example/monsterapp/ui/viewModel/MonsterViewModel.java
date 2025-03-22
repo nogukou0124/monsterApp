@@ -1,24 +1,28 @@
 package com.example.monsterapp.ui.viewModel;
 
-import android.annotation.SuppressLint;
 import android.app.Application;
 import android.content.res.AssetManager;
 import android.util.Log;
 
 import androidx.annotation.NonNull;
-import androidx.annotation.Nullable;
 import androidx.lifecycle.AndroidViewModel;
 import androidx.lifecycle.LiveData;
 import androidx.lifecycle.MutableLiveData;
+
+import dagger.hilt.android.lifecycle.HiltViewModel;
 import io.reactivex.rxjava3.android.schedulers.AndroidSchedulers;
 
-import com.example.monsterapp.model.manager.battle.BattleStatus;
-import com.example.monsterapp.ui.button.UIButtonState;
+import com.example.monsterapp.model.data.repository.MonsterRepository;
+import com.example.monsterapp.model.entity.battle.BattleStatus;
+import com.example.monsterapp.model.state.State;
+import com.example.monsterapp.usecase.BattleUseCase;
+import com.example.monsterapp.usecase.MonsterStateUseCase;
+import com.example.monsterapp.ui.data.buttonState;
 import com.example.monsterapp.model.state.StateCode;
-import com.example.monsterapp.model.manager.MonsterManager;
 import com.example.monsterapp.util.Event.Event;
 import com.example.monsterapp.model.entity.monster.Monster;
-import com.example.monsterapp.ui.model.MonsterViewData;
+import com.example.monsterapp.ui.data.MonsterViewData;
+import com.example.monsterapp.util.Event.EventCode;
 import com.google.gson.Gson;
 import com.google.gson.reflect.TypeToken;
 
@@ -30,11 +34,15 @@ import java.lang.reflect.Type;
 import java.util.HashMap;
 import java.util.Map;
 
+import javax.inject.Inject;
+
 import io.reactivex.rxjava3.disposables.CompositeDisposable;
+import io.reactivex.rxjava3.schedulers.Schedulers;
 
 /**
  * ViewModel
  */
+@HiltViewModel
 public class MonsterViewModel extends AndroidViewModel{
 
     // LiveData
@@ -43,51 +51,88 @@ public class MonsterViewModel extends AndroidViewModel{
     /** モンスターの描画データを管理するLiveData */
     @NonNull private final MutableLiveData<MonsterViewData> monsterViewLiveData = new MutableLiveData<>();
     /** ボタンの活性状態を管理するLiveData */
-    @NonNull private final MutableLiveData<UIButtonState> buttonStatesLiveData = new MutableLiveData<>();
-    /** バトルログ */
-    @NonNull private final MutableLiveData<String> battleLogLiveData = new MutableLiveData<>();
+    @NonNull private final MutableLiveData<buttonState> buttonStatesLiveData = new MutableLiveData<>();
 
     /** Model */
-    @Nullable private MonsterManager monsterManager = null;
+    @NonNull private final MonsterRepository repository;
+    @NonNull private final MonsterStateUseCase stateUseCase;
+    @NonNull private final BattleUseCase battleUseCase;
     /** disposable */
     @NonNull private final CompositeDisposable disposables = new CompositeDisposable();
     /** モンスター描画データの管理マップ */
     @NonNull private Map<StateCode, MonsterViewData> monsterViewDataMap = new HashMap<>();
 
     /**
-     * コンストラクタ
-     * @param application　コンテキスト
+     * コンストラクタ（Hilt用）
+     * @param application アプリケーション
+     * @param repository モンスターリポジトリ
+     * @param stateUseCase モンスター状態ユースケース
+     * @param battleUseCase 対戦ユースケース
      */
-    @SuppressLint("CheckResult")
-    public MonsterViewModel(Application application) {
+    @Inject
+    public MonsterViewModel(
+            Application application,
+            MonsterRepository repository,
+            MonsterStateUseCase stateUseCase,
+            BattleUseCase battleUseCase) {
         super(application);
 
+        this.repository = repository;
+        this.stateUseCase = stateUseCase;
+        this.battleUseCase = battleUseCase;
+
         // 通常時のボタンを表示する
-        UIButtonState uiButtonState = new UIButtonState();
-        uiButtonState.setState(1);
-        buttonStatesLiveData.setValue(uiButtonState);
+        buttonState buttonState = new buttonState();
+        buttonState.setState(1);
+        buttonStatesLiveData.setValue(buttonState);
 
         // 描画データをロード
         loadViewData(application);
 
-        monsterManager = new MonsterManager(application);
+        // モンスターの監視
         disposables.add(
-                monsterManager.monsterSubject
+                repository.getMonster(1)
+                        .subscribeOn(Schedulers.io())
                         .observeOn(AndroidSchedulers.mainThread())
                         .subscribe(
-                                this::fetchMonsterData,
-                                throwable -> Log.d("update Error", "monster cannot be updated")
+                                monster -> {
+                                    monsterLiveData.setValue(monster);
+                                    Log.d("MonsterViewModel", "Monster updated: " + monster.name);
+                                },
+                                throwable -> Log.e("MonsterViewModel", "Error updating monster", throwable)
                         )
         );
+
+        // 状態の監視
         disposables.add(
-                monsterManager.battleStatusSubject
+                stateUseCase.observeCurrentState()
+                        .subscribeOn(Schedulers.io())
                         .observeOn(AndroidSchedulers.mainThread())
                         .subscribe(
-                                this::onChangedBattleStatus,
-                                throwable -> Log.d("update Error", "monster cannot be updated")
+                                newState -> {
+                                    updateMonsterView(newState);
+                                    updateButtonStateByMonsterState(newState);
+                                    Log.d("MonsterViewModel", "State updated: " + newState.stateCode);
+                                },
+                                throwable -> Log.e("MonsterViewModel", "Error observing state", throwable)
+                        )
+        );
+
+        // 対戦状態の監視
+        disposables.add(
+                battleUseCase.observeBattleStatus()
+                        .subscribeOn(Schedulers.io())
+                        .observeOn(AndroidSchedulers.mainThread())
+                        .subscribe(
+                                newBattleStatus -> {
+                                    updateButtonStateByBattleStatus(newBattleStatus);
+                                    Log.d("MonsterViewModel", "Battle status updated: " + newBattleStatus);
+                                },
+                                throwable -> Log.e("MonsterViewModel", "Error observing battle status", throwable)
                         )
         );
     }
+
 
 
 
@@ -95,12 +140,12 @@ public class MonsterViewModel extends AndroidViewModel{
     protected void onCleared() {
         Log.d("LifeCycleEvent ViewModel", "View Model is cleared");
         super.onCleared();
-
-        if (monsterManager != null) {
-            monsterManager.clear();
-        }
         // 購読を解除
         disposables.clear();
+
+        // UseCaseのクリーンアップ
+        stateUseCase.cleanup();
+        battleUseCase.cleanup();
     }
 
     /**
@@ -116,7 +161,7 @@ public class MonsterViewModel extends AndroidViewModel{
      * @return ボタンの活性状態
      */
     @NonNull
-    public MutableLiveData<UIButtonState> getButtonStatesLiveData() { return buttonStatesLiveData; }
+    public MutableLiveData<buttonState> getButtonStatesLiveData() { return buttonStatesLiveData; }
 
     /**
      * モンスターの描画データを取得する
@@ -126,66 +171,82 @@ public class MonsterViewModel extends AndroidViewModel{
     public MutableLiveData<MonsterViewData> getMonsterViewLiveData() { return monsterViewLiveData; }
 
     /**
-     * ユーザのアクションイベント
+     * 状態変化イベントクリック
      * @param event　イベント
      */
     public void onClickEvent(@NonNull Event event) {
-        if (monsterManager == null) { return; }
-        monsterManager.handleEvent(event);
-    }
+        Log.d("MonsterViewModel", "onClickEvent" + event.eventCode.toString());
+        Monster currentMonster = monsterLiveData.getValue();
+        if (currentMonster == null) return;
 
-    /**
-     * Modelのデータと同期をとる
-     * @param newMonster 新しいモンスター情報
-     */
-    private void fetchMonsterData(@Nullable Monster newMonster) {
-        if (newMonster == null) { return; }
-        if (buttonStatesLiveData.getValue() == null) { return; }
-        // 描画データを更新する
-        monsterViewLiveData.postValue(monsterViewDataMap.get(newMonster.stateCode));
-
-        UIButtonState newUiButtonState = new UIButtonState();
-        // 死亡状態であれば、「リセット」ボタンのみ表示
-        if (newMonster.stateCode == StateCode.DEATH) {
-            newUiButtonState.setState(4);
-            buttonStatesLiveData.postValue(newUiButtonState);
+        if (event.eventCode == EventCode.ESCAPE) {
+            battleUseCase.onClickEscape();
+        } else if (event.eventCode == EventCode.BLE_BATTLE_TRIGGERED) {
+            battleUseCase.onClickBleBattle();
+        } else {
+            stateUseCase.handleEvent(event);
         }
-
-        // モンスター情報を更新する
-        monsterLiveData.postValue(newMonster);
     }
 
     /**
-     * 対戦ステータスを基に画面のボタンを制御する
+     * モンスターの状態を元に描画データを更新する
+     * @param newState 新しいモンスターの状態
+     */
+    private void updateMonsterView(@NonNull State newState) {
+        Log.d("MonsterViewModel", "update monster view");
+        MonsterViewData newMonsterViewData = monsterViewDataMap.get(newState.stateCode);
+        monsterViewLiveData.postValue(newMonsterViewData);
+
+        // 後々消す
+        Monster monster = monsterLiveData.getValue();
+        if (monster == null) { return; }
+        monster.stateCode = newState.stateCode;
+        monsterLiveData.postValue(monster);
+
+    }
+
+    /**
+     * モンスターの状態を元にボタンの表示制御を更新する
+     * @param newState 新しいモンスターの状態
+     */
+    private void updateButtonStateByMonsterState(@NonNull State newState) {
+        if (newState.stateCode == StateCode.DEATH) {
+            buttonState newButtonState = new buttonState();
+            newButtonState.setState(4);
+            buttonStatesLiveData.postValue(newButtonState);
+        }
+    }
+
+
+    /**
+     * 対戦ステータスを元にボタンの表示制御を更新する
      * @param newBattleStatus 新しい対戦ステータス
      */
-    private void onChangedBattleStatus(@NonNull BattleStatus newBattleStatus) {
-        UIButtonState uiButtonState = new UIButtonState();
-        Log.d("onChangedBattleStatus", "update ui state");
+    private void updateButtonStateByBattleStatus(@NonNull BattleStatus newBattleStatus) {
+        Monster currentMonster = monsterLiveData.getValue();
+        if (currentMonster == null || currentMonster.stateCode == StateCode.DEATH) {
+            return;
+        }
+
+        buttonState buttonState = new buttonState();
+        Log.d("MonsterViewModel", "update button state by battle status");
 
         switch (newBattleStatus) {
             case NORMAL:
-                uiButtonState.setState(1);
+                buttonState.setState(1);
                 break;
             case READY_NPC_BATTLE:
-                uiButtonState.setState(2);
+                buttonState.setState(2);
                 break;
             case READY_BLE_BATTLE:
-                uiButtonState.setState(3);
+                buttonState.setState(3);
                 break;
             case NPC_BATTLE_START:
-            case BLE_BATTLE_START:
-            case ATTACKING:
-            case ATTACKED:
-            case WIN:
-            case LOSE:
-                Log.d("update ui", "battling");
-                uiButtonState.setState(5);
-                break;
+                buttonState.setState(5);
             default:
-                uiButtonState.setState(99);
+                buttonState.setState(5);
         }
-        buttonStatesLiveData.postValue(uiButtonState);
+        buttonStatesLiveData.postValue(buttonState);
     }
 
     /**

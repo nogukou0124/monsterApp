@@ -4,7 +4,7 @@ import androidx.annotation.NonNull;
 
 import com.example.monsterapp.model.state.State;
 import com.example.monsterapp.model.state.StateCode;
-import com.example.monsterapp.model.manager.state.StateMachine;
+import com.example.monsterapp.model.state.StateMachine;
 import com.example.monsterapp.util.Event.Event;
 import com.example.monsterapp.util.Event.EventCode;
 

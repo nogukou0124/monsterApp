@@ -1,4 +1,4 @@
-package com.example.monsterapp.model.manager.battle;
+package com.example.monsterapp.model.entity.battle;
 
 public enum BattleStatus {
     NORMAL, // 通常時

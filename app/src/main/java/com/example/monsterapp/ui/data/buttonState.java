@@ -1,6 +1,6 @@
-package com.example.monsterapp.ui.button;
+package com.example.monsterapp.ui.data;
 
-public class UIButtonState {
+public class buttonState {
     public boolean isFeedBtnShown;
     public boolean isToiletBtnShown;
     public boolean isCureBtnShown;
@@ -9,7 +9,7 @@ public class UIButtonState {
     public boolean isEscapeBtnShown;
     public boolean isLoadingShown;
 
-    public UIButtonState() {}
+    public buttonState() {}
 
     /**
      * モードに従ってボタンの状態を更新する<br>

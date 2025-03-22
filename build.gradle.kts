@@ -2,3 +2,10 @@
 plugins {
     alias(libs.plugins.android.application) apply false
 }
+
+// プロジェクトレベルのbuild.gradle
+buildscript {
+    dependencies {
+        classpath(libs.hilt.android.gradle.plugin)
+    }
+}

@@ -15,6 +15,9 @@ import androidx.fragment.app.FragmentTransaction;
 
 import com.example.monsterapp.ui.view.MonsterViewFragment;
 
+import dagger.hilt.android.AndroidEntryPoint;
+
+@AndroidEntryPoint
 public class MainActivity extends AppCompatActivity {
 
     @RequiresApi(api = Build.VERSION_CODES.S)

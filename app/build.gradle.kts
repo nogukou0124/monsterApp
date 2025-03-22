@@ -1,5 +1,6 @@
 plugins {
     alias(libs.plugins.android.application)
+    id("dagger.hilt.android.plugin")
 }
 
 android {
@@ -90,7 +91,9 @@ dependencies {
 }
 
 dependencies {
-    implementation("com.google.code.gson:gson:2.11.0")
-    implementation("io.reactivex.rxjava3:rxjava:3.1.5")
-    implementation("io.reactivex.rxjava3:rxandroid:3.0.2")
+    implementation(libs.gson)
+    implementation(libs.rxjava3.rxjava)
+    implementation(libs.rxjava3.rxandroid)
+    implementation(libs.hilt.android)
+    annotationProcessor(libs.hilt.compiler)
 }

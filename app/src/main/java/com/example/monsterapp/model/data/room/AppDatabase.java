@@ -18,7 +18,7 @@ import com.example.monsterapp.model.state.StateCode;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 
-@Database(entities = {Monster.class}, version = 4, exportSchema = false)
+@Database(entities = {Monster.class}, version = 5, exportSchema = false)
 @TypeConverters({StateCodeConverter.class})
 public abstract class AppDatabase extends RoomDatabase {
     public abstract MonsterDao monsterDao();

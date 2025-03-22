@@ -5,5 +5,4 @@ import com.example.monsterapp.util.Event.Event;
 
 public interface StateEventListener {
     public abstract void onUpdatedState(State oldState, State newState);
-    public abstract void onTimeEvent(Event event);
 }

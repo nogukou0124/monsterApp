@@ -1,4 +1,4 @@
-package com.example.monsterapp.ui.model;
+package com.example.monsterapp.ui.data;
 
 /**
  * モンスター描画データクラス

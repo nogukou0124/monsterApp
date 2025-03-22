@@ -1,16 +1,20 @@
-package com.example.monsterapp.model.manager.state;
+package com.example.monsterapp.model.state;
 
 import android.util.Log;
 
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 
-import com.example.monsterapp.model.state.State;
-import com.example.monsterapp.model.state.StateCode;
 import com.example.monsterapp.util.Event.Event;
+import com.example.monsterapp.util.Event.EventCode;
 
 import java.util.HashMap;
 import java.util.Map;
+import java.util.concurrent.Executors;
+import java.util.concurrent.ScheduledExecutorService;
+import java.util.concurrent.TimeUnit;
+
+import io.reactivex.rxjava3.subjects.BehaviorSubject;
 
 /**
  * StateMachineクラス
@@ -22,6 +26,10 @@ public class StateMachine {
     private @Nullable State currentState;
     /** １つ前の永続State　*/
     private @Nullable State preState;
+    /** subject */
+    private final @NonNull BehaviorSubject<State> stateSubject = BehaviorSubject.create();
+    /** 時間イベントのScheduler */
+    ScheduledExecutorService scheduler = Executors.newScheduledThreadPool(1);
 
     /**
      * コンストラクタ
@@ -46,6 +54,7 @@ public class StateMachine {
         if (currentState == null) {
             throw new NullPointerException("存在しない状態に遷移できません");
         }
+        stateSubject.onNext(currentState);
     }
 
     /**
@@ -53,6 +62,8 @@ public class StateMachine {
      * @return 現在の状態
      */
     @Nullable public State getCurrentState() { return currentState; }
+
+    @NonNull public BehaviorSubject<State> observeCurrentState() { return stateSubject; }
 
     /**
      * 1つ前状態のgetter
@@ -75,6 +86,7 @@ public class StateMachine {
             return;
         }
         currentState.onEnter();
+        stateSubject.onNext(currentState);
     }
 
     /**
@@ -86,6 +98,7 @@ public class StateMachine {
         }
         currentState = null;
         stateMap = new HashMap<>();
+        scheduler.shutdown();
     }
 
     /**
@@ -96,5 +109,16 @@ public class StateMachine {
             Log.d("state handle event", "current state is " + currentState.stateCode.toString());
             currentState.handleEvent(event);
         }
+    }
+
+    /**
+     * 時間経過イベントのスケジューラーを設定
+     */
+    public void setTimeEvent() {
+        // 15分ごとにTimeイベントを発行
+        scheduler.scheduleWithFixedDelay(() -> {
+            Log.d("StateMachine", "Time event triggered");
+            handleEvent(new Event(EventCode.TIME));
+        }, 0, 900, TimeUnit.SECONDS);
     }
 }

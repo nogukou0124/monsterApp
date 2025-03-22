@@ -6,7 +6,6 @@ import android.util.Log;
 import androidx.annotation.NonNull;
 
 import com.example.monsterapp.util.Event.Event;
-import com.example.monsterapp.model.manager.state.StateMachine;
 
 /**
  * Stateクラス

@@ -1,6 +1,8 @@
 [versions]
 agp = "8.6.0"
 cardview = "1.0.0"
+gson = "2.11.0"
+hiltAndroid = "2.44"
 junit = "4.13.2"
 junitVersion = "1.2.1"
 espressoCore = "3.6.1"
@@ -11,7 +13,9 @@ constraintlayout = "2.2.0"
 materialVersion = "1.4.0"
 roomRuntime = "2.6.1"
 rxandroid = "2.1.0"
+rxandroidVersion = "3.0.2"
 rxjava = "2.2.5"
+rxjavaVersion = "3.1.5"
 
 [libraries]
 androidx-cardview = { module = "androidx.cardview:cardview", version.ref = "cardview" }
@@ -19,6 +23,10 @@ androidx-room-guava = { module = "androidx.room:room-guava", version.ref = "room
 androidx-room-paging = { module = "androidx.room:room-paging", version.ref = "roomRuntime" }
 androidx-room-rxjava3 = { module = "androidx.room:room-rxjava3", version.ref = "roomRuntime" }
 androidx-room-testing = { module = "androidx.room:room-testing", version.ref = "roomRuntime" }
+gson = { module = "com.google.code.gson:gson", version.ref = "gson" }
+hilt-android = { module = "com.google.dagger:hilt-android", version.ref = "hiltAndroid" }
+hilt-android-gradle-plugin = { module = "com.google.dagger:hilt-android-gradle-plugin", version.ref = "hiltAndroid" }
+hilt-compiler = { module = "com.google.dagger:hilt-compiler", version.ref = "hiltAndroid" }
 junit = { group = "junit", name = "junit", version.ref = "junit" }
 ext-junit = { group = "androidx.test.ext", name = "junit", version.ref = "junitVersion" }
 espresso-core = { group = "androidx.test.espresso", name = "espresso-core", version.ref = "espressoCore" }
@@ -33,6 +41,8 @@ room-runtime = { module = "androidx.room:room-runtime", version.ref = "roomRunti
 room-rxjava2 = { module = "androidx.room:room-rxjava2", version.ref = "roomRuntime" }
 rxandroid = { module = "io.reactivex.rxjava2:rxandroid", version.ref = "rxandroid" }
 rxjava = { module = "io.reactivex.rxjava2:rxjava", version.ref = "rxjava" }
+rxjava3-rxandroid = { module = "io.reactivex.rxjava3:rxandroid", version.ref = "rxandroidVersion" }
+rxjava3-rxjava = { module = "io.reactivex.rxjava3:rxjava", version.ref = "rxjavaVersion" }
 rxkotlin = { module = "io.reactivex.rxjava2:rxkotlin", version.ref = "rxandroid" }
 
 [plugins]
