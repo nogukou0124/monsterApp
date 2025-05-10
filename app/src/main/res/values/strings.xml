@@ -3,6 +3,7 @@
     <string name="feed_btn">エサ</string>
     <string name="toilet_btn">トイレ</string>
     <string name="cure_btn">治療</string>
-    <string name="buttle_btn">通信対戦</string>
+    <string name="battle_btn">通信対戦</string>
     <string name="reset_btn">リセット</string>
+    <string name="escape_btn">逃げる</string>
 </resources>

@@ -1,6 +1,6 @@
-
 plugins {
     alias(libs.plugins.android.application)
+    id("dagger.hilt.android.plugin")
 }
 
 android {
@@ -83,8 +83,17 @@ dependencies {
     // optional - Paging 3 Integration
     implementation(libs.androidx.room.paging)
 
+    // 既存の依存関係
+    implementation(libs.androidx.cardview)
+    // 必要に応じてMaterial Designも追加
+    implementation(libs.material.v140)
+
 }
 
 dependencies {
-    implementation("com.google.code.gson:gson:2.11.0")
+    implementation(libs.gson)
+    implementation(libs.rxjava3.rxjava)
+    implementation(libs.rxjava3.rxandroid)
+    implementation(libs.hilt.android)
+    annotationProcessor(libs.hilt.compiler)
 }
